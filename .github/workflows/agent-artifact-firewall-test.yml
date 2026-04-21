@@ -1,0 +1,50 @@
+name: Agent Artifact Firewall Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  scan-agent-artifacts:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run AGENT-ARTIFACT-FIREWALL text scan
+        id: text_scan
+        continue-on-error: true
+        uses: rustwoodagent-ops/agent-artifact-firewall@v0.1.1
+        with:
+          path: .
+          format: text
+          fail_on: high
+          max_risk_score: '70'
+          enforce_failure: 'false'
+
+      - name: Run AGENT-ARTIFACT-FIREWALL SARIF scan
+        id: sarif_scan
+        continue-on-error: true
+        uses: rustwoodagent-ops/agent-artifact-firewall@v0.1.1
+        with:
+          path: .
+          format: sarif
+          out: results.sarif
+          fail_on: high
+          max_risk_score: '70'
+          upload_sarif: 'true'
+          enforce_failure: 'false'
+
+      - name: Summarize scan step outcomes
+        if: always()
+        run: |
+          {
+            echo "### Test step outcomes"
+            echo ""
+            echo "- Text scan: ${{ steps.text_scan.outcome }}"
+            echo "- SARIF scan: ${{ steps.sarif_scan.outcome }}"
+          } >> "$GITHUB_STEP_SUMMARY"
